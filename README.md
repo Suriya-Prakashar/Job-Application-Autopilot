@@ -1,6 +1,8 @@
 # 🤖 Job Application Autopilot
 
-![Workflow](workflow.png)
+![Workflow]
+
+(workflow.png)
 
 > **AI-powered n8n job application workflow that evaluates CV-to-job fit, generates a personalized cover letter, logs applications to Google Sheets, and schedules a 7-day follow-up.**
 
