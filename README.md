@@ -26,6 +26,77 @@ The workflow:
 
 ---
 
+
+## 🚀 How to Use
+
+### Step 1: Import the Workflow
+
+Import the provided n8n JSON workflow into your n8n instance.
+
+### Step 2: Configure Credentials
+
+Open the relevant nodes and select your own credentials for:
+
+- Google Drive
+- Google Gemini
+- Gmail
+- Google Sheets
+- Google Calendar
+
+**Do not rely on credential IDs from the exported workflow.** Credential references are specific to the original n8n environment.
+
+### Step 3: Configure Google Sheets
+
+Create or select the spreadsheet where applications should be stored.
+
+Make sure the sheet contains the columns required by the logging node, including:
+
+```text
+Date
+Name
+Email
+Phone
+Company
+Position
+Fit Score
+Fit Summary
+Matching Skills
+Missing Skills
+Reasoning
+Cover Letter
+Portfolio
+Follow-up Date
+Status
+AI Status
+```
+
+### Step 4: Configure Google Drive Access
+
+The applicant must provide a Google Drive CV URL that the configured Google Drive credential can access.
+
+### Step 5: Test the Workflow
+
+Submit a test application containing:
+
+- A real or test CV
+- A sample job description
+- Candidate details
+- Company and position information
+
+Then verify:
+
+1. CV downloads correctly.
+2. CV text is extracted.
+3. Gemini returns structured output.
+4. Email is delivered.
+5. Application is logged.
+6. Calendar follow-up is created.
+
+### Step 6: Activate the Workflow
+
+After testing all integrations, activate the n8n workflow.
+
+---
 ## ✨ Key Features
 
 ### 📝 Application Intake
@@ -375,76 +446,6 @@ Before importing and running the workflow, make sure you have:
 
 ---
 
-## 🚀 How to Use
-
-### Step 1: Import the Workflow
-
-Import the provided n8n JSON workflow into your n8n instance.
-
-### Step 2: Configure Credentials
-
-Open the relevant nodes and select your own credentials for:
-
-- Google Drive
-- Google Gemini
-- Gmail
-- Google Sheets
-- Google Calendar
-
-**Do not rely on credential IDs from the exported workflow.** Credential references are specific to the original n8n environment.
-
-### Step 3: Configure Google Sheets
-
-Create or select the spreadsheet where applications should be stored.
-
-Make sure the sheet contains the columns required by the logging node, including:
-
-```text
-Date
-Name
-Email
-Phone
-Company
-Position
-Fit Score
-Fit Summary
-Matching Skills
-Missing Skills
-Reasoning
-Cover Letter
-Portfolio
-Follow-up Date
-Status
-AI Status
-```
-
-### Step 4: Configure Google Drive Access
-
-The applicant must provide a Google Drive CV URL that the configured Google Drive credential can access.
-
-### Step 5: Test the Workflow
-
-Submit a test application containing:
-
-- A real or test CV
-- A sample job description
-- Candidate details
-- Company and position information
-
-Then verify:
-
-1. CV downloads correctly.
-2. CV text is extracted.
-3. Gemini returns structured output.
-4. Email is delivered.
-5. Application is logged.
-6. Calendar follow-up is created.
-
-### Step 6: Activate the Workflow
-
-After testing all integrations, activate the n8n workflow.
-
----
 
 ## 🧩 AI Prompt Design
 
