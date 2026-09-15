@@ -1,0 +1,1178 @@
+{
+  "name": "Job Application Autopilot",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Job Application Autopilot",
+        "formDescription": "Submit your CV and job details to automatically analyze fit, generate a cover letter, log the application, and schedule a follow-up.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Phone"
+            },
+            {
+              "fieldLabel": "Company",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Job Position",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Job Description",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Portfolio / GitHub URL"
+            },
+            {
+              "fieldLabel": "CV Link (Google Drive URL)",
+              "placeholder": "https://drive.google.com/...",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c521d1f3-cb11-4fa2-97f3-87eb481b169a",
+      "name": "Job Application Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -1872,
+        368
+      ],
+      "webhookId": "22f57617-45f2-4bda-949a-cc580e5f7557"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "candidate_name",
+              "value": "={{ $json['Full Name'] }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "candidate_email",
+              "value": "={{ $json['Email'] }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "phone",
+              "value": "={{ $json['Phone'] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "company",
+              "value": "={{ $json['Company'] }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "job_title",
+              "value": "={{ $json['Job Position'] }}",
+              "type": "string"
+            },
+            {
+              "id": "a6",
+              "name": "job_description",
+              "value": "={{ $json['Job Description'] }}",
+              "type": "string"
+            },
+            {
+              "id": "a8",
+              "name": "portfolio_url",
+              "value": "={{ $json['Portfolio / GitHub URL'] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "a11",
+              "name": "cv_link",
+              "value": "={{ $json['CV Link (Google Drive URL)'] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "a9",
+              "name": "submitted_at",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "a10",
+              "name": "follow_up_date",
+              "value": "={{ $now.plus({days: 7}).toISO() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "688580a1-b652-458e-b52b-fcb7a8a25c9a",
+      "name": "Prepare Application Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1632,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "={{ $json.cv_link }}"
+        },
+        "options": {
+          "binaryPropertyName": "data",
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "application/pdf"
+            }
+          }
+        }
+      },
+      "id": "1009d895-13ee-4eac-b32a-9c31eb3473aa",
+      "name": "Google Drive - Download CV",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1312,
+        368
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "TnZme1o32TH0zhM7",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {
+          "joinPages": true
+        }
+      },
+      "id": "45580204-d023-4fd9-9dfa-d053f65b0f6c",
+      "name": "Extract CV Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -1024,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=CANDIDATE CV:\n\n{{ $json.text }}\n\nJOB DESCRIPTION:\n\n{{ $('Prepare Application Data').item.json.job_description }}\n\nCandidate: {{ $('Prepare Application Data').item.json.candidate_name }}\nCompany: {{ $('Prepare Application Data').item.json.company }}\nPosition: {{ $('Prepare Application Data').item.json.job_title }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=You are an expert technical recruiter and evidence-based CV evaluation system.\n\nYour task is to evaluate the candidate CV against the provided Job Description.\n\nIMPORTANT RULES:\n\n1. Use ONLY information explicitly present in the CV and Job Description.\n2. NEVER invent skills, experience, projects, certifications, education, achievements, tools, or responsibilities.\n3. Every score MUST be supported by evidence from the CV.\n4. If something is not found in the CV, mark it as \"Not Found\".\n5. Do not assume that a candidate knows a technology just because they know a related technology.\n6. Do not give points for unsupported claims.\n7. Separate \"Matched\", \"Partial Match\", and \"Not Found\".\n8. Calculate the final score from the weighted criteria below.\n9. The final score MUST equal the sum of all criterion scores.\n10. Maximum total score is exactly 100.\n\nSCORING RUBRIC:\n\n1. Core / Required Skills = 30 points\n2. Relevant Experience = 20 points\n3. Projects / Practical Work = 15 points\n4. Education / Degree = 10 points\n5. Job Responsibilities Match = 10 points\n6. Certifications = 5 points\n7. Tools / Technologies = 5 points\n8. ATS / Important JD Terminology = 5 points\n\nTOTAL = 100 POINTS\n\nSCORING RULES:\n\nCORE SKILLS — 30 POINTS\n- Identify the important required skills from the Job Description.\n- Compare each requirement against the CV.\n- Give points only when the CV provides evidence.\n- Distinguish exact matches from partial matches.\n- Record proof for every important skill.\n\nRELEVANT EXPERIENCE — 20 POINTS\n- Evaluate internships, employment, training, or other explicitly stated professional experience.\n- Consider relevance to the target position.\n- Do not treat academic knowledge as professional experience.\n\nPROJECTS / PRACTICAL WORK — 15 POINTS\n- Evaluate projects explicitly mentioned in the CV.\n- Consider relevance, technical complexity, and technologies used.\n- Projects can provide evidence of practical ability but must not be treated as employment experience.\n\nEDUCATION — 10 POINTS\n- Compare the candidate's degree, field, and education against the Job Description.\n- Give points based only on explicit CV information.\n\nJOB RESPONSIBILITIES — 10 POINTS\n- Compare responsibilities in the Job Description with activities explicitly demonstrated in the CV.\n- Give higher scores when the CV provides direct evidence.\n\nCERTIFICATIONS — 5 POINTS\n- Only count certifications explicitly listed in the CV.\n- Do not assume certification from experience with a technology.\n\nTOOLS / TECHNOLOGIES — 5 POINTS\n- Compare tools and technologies required by the Job Description with those explicitly present in the CV.\n\nATS / JD TERMINOLOGY — 5 POINTS\n- Evaluate important terminology and keywords from the Job Description that are genuinely supported by the CV.\n- Do not reward keyword stuffing without evidence.\n\nEVIDENCE REQUIREMENT:\n\nFor every scoring criterion provide:\n- score\n- maximum score\n- reason\n- matched items\n- partial matches\n- missing items\n- proof\n\nProof must quote or closely identify the relevant information from the CV.\n\nFor missing information use:\n\"Not found in the provided CV.\"\n\nFINAL SCORE:\n\nCalculate:\n\ncore_skills_score\n+ experience_score\n+ projects_score\n+ education_score\n+ responsibilities_score\n+ certifications_score\n+ tools_score\n+ ats_score\n\nThe result must be exactly between 0 and 100.\n\nAlso calculate a confidence score from 0 to 100 representing how strongly the final evaluation is supported by explicit CV evidence.\n\nDo not confuse confidence with fit score.\n\nFinally:\n- provide matching skills\n- provide missing skills\n- provide detailed reasoning\n- generate a personalized cover letter\n- never invent information."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "cefe7f65-c1a6-4767-93a7-df598bf254b3",
+      "name": "Gemini - Analyze & Write",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -752,
+        368
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "options": {
+          "temperature": 0.4
+        }
+      },
+      "id": "2deb85f0-2f7b-454f-954b-9fcb335d4ee3",
+      "name": "Google Gemini Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -752,
+        592
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "3dw1f9FA4OGlrBlH",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"fit_score\": 85,\n  \"confidence\": 92,\n\n  \"fit_summary\": \"Short explanation of the candidate's overall suitability.\",\n\n  \"score_breakdown\": {\n    \"core_skills\": {\n      \"score\": 27,\n      \"max_score\": 30,\n      \"reason\": \"Strong match with most required skills.\",\n      \"matched\": [\n        {\n          \"requirement\": \"Python\",\n          \"status\": \"Matched\",\n          \"proof\": \"Python listed under Technical Skills.\"\n        }\n      ],\n      \"partial_matches\": [],\n      \"missing\": [\n        {\n          \"requirement\": \"Kubernetes\",\n          \"status\": \"Not Found\",\n          \"proof\": \"Not found in the provided CV.\"\n        }\n      ]\n    },\n\n    \"experience\": {\n      \"score\": 16,\n      \"max_score\": 20,\n      \"reason\": \"Relevant internship experience is present.\",\n      \"proof\": [\n        \"Machine Learning internship experience is explicitly listed in the CV.\"\n      ]\n    },\n\n    \"projects\": {\n      \"score\": 14,\n      \"max_score\": 15,\n      \"reason\": \"Projects demonstrate relevant practical skills.\",\n      \"proof\": [\n        \"Relevant technical projects are explicitly listed in the CV.\"\n      ]\n    },\n\n    \"education\": {\n      \"score\": 10,\n      \"max_score\": 10,\n      \"reason\": \"Education matches the job requirement.\",\n      \"proof\": [\n        \"Candidate degree is explicitly listed in the CV.\"\n      ]\n    },\n\n    \"responsibilities\": {\n      \"score\": 8,\n      \"max_score\": 10,\n      \"reason\": \"Most responsibilities are supported by CV evidence.\",\n      \"proof\": []\n    },\n\n    \"certifications\": {\n      \"score\": 2,\n      \"max_score\": 5,\n      \"reason\": \"Some relevant certification evidence is present.\",\n      \"proof\": []\n    },\n\n    \"tools\": {\n      \"score\": 4,\n      \"max_score\": 5,\n      \"reason\": \"Most required tools are present.\",\n      \"proof\": []\n    },\n\n    \"ats_keywords\": {\n      \"score\": 4,\n      \"max_score\": 5,\n      \"reason\": \"Most important terminology is supported by the CV.\",\n      \"proof\": []\n    }\n  },\n\n  \"matching_skills\": [\n    \"Python\",\n    \"FastAPI\"\n  ],\n\n  \"missing_skills\": [\n    \"Kubernetes\"\n  ],\n\n  \"evidence\": [\n    {\n      \"requirement\": \"Python\",\n      \"status\": \"Matched\",\n      \"proof\": \"Python is explicitly listed in the candidate's technical skills.\"\n    }\n  ],\n\n  \"reasoning\": \"Detailed explanation of how the final score was calculated using only CV evidence.\",\n\n  \"cover_letter\": \"Personalized professional cover letter.\"\n}"
+      },
+      "id": "693a0d8c-556f-4b67-a2b0-c93e1faf3a84",
+      "name": "Analysis Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -608,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1",
+              "name": "candidate_name",
+              "value": "={{ $('Prepare Application Data').item.json.candidate_name }}",
+              "type": "string"
+            },
+            {
+              "id": "f2",
+              "name": "candidate_email",
+              "value": "={{ $('Prepare Application Data').item.json.candidate_email }}",
+              "type": "string"
+            },
+            {
+              "id": "f3",
+              "name": "phone",
+              "value": "={{ $('Prepare Application Data').item.json.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "f4",
+              "name": "company",
+              "value": "={{ $('Prepare Application Data').item.json.company }}",
+              "type": "string"
+            },
+            {
+              "id": "f5",
+              "name": "job_title",
+              "value": "={{ $('Prepare Application Data').item.json.job_title }}",
+              "type": "string"
+            },
+            {
+              "id": "f6",
+              "name": "portfolio_url",
+              "value": "={{ $('Prepare Application Data').item.json.portfolio_url }}",
+              "type": "string"
+            },
+            {
+              "id": "f14",
+              "name": "cv_link",
+              "value": "={{ $('Prepare Application Data').item.json.cv_link }}",
+              "type": "string"
+            },
+            {
+              "id": "f15",
+              "name": "matching_skills",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "f16",
+              "name": "missing_skills",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "f7",
+              "name": "submitted_at",
+              "value": "={{ $('Prepare Application Data').item.json.submitted_at }}",
+              "type": "string"
+            },
+            {
+              "id": "f8",
+              "name": "follow_up_date",
+              "value": "={{ $('Prepare Application Data').item.json.follow_up_date }}",
+              "type": "string"
+            },
+            {
+              "id": "f9",
+              "name": "fit_score",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "f10",
+              "name": "fit_summary",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "f11",
+              "name": "reasoning",
+              "value": "AI analysis was temporarily unavailable.",
+              "type": "string"
+            },
+            {
+              "id": "f12",
+              "name": "cover_letter",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "f13",
+              "name": "ai_status",
+              "value": "Failed",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8d25f02b-b7e4-4d24-b646-e8d30377c93c",
+      "name": "Prepare Fallback Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -224,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.candidate_email }}",
+        "subject": "Application Received - AI Analysis Temporarily Unavailable",
+        "emailType": "text",
+        "message": "=Hi {{ $json.candidate_name }},\n\nWe received your application for {{ $json.job_title }} at {{ $json.company }}.\n\nOur automated AI analysis is temporarily unavailable. Your application has still been recorded successfully. Please check back later or process the application manually.\n\nBest regards,\nJob Application Autopilot",
+        "options": {}
+      },
+      "id": "89794b61-fcdf-4723-bce8-33a56887a620",
+      "name": "Gmail - Fallback Message",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        112,
+        464
+      ],
+      "webhookId": "de380984-f963-418e-99bc-2c77e90c1fb0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ib01UFUzm48eIJc5",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "candidate_name",
+              "value": "={{ $('Prepare Application Data').item.json.candidate_name }}",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "candidate_email",
+              "value": "={{ $('Prepare Application Data').item.json.candidate_email }}",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "phone",
+              "value": "={{ $('Prepare Application Data').item.json.phone }}",
+              "type": "string"
+            },
+            {
+              "id": "s4",
+              "name": "company",
+              "value": "={{ $('Prepare Application Data').item.json.company }}",
+              "type": "string"
+            },
+            {
+              "id": "s5",
+              "name": "job_title",
+              "value": "={{ $('Prepare Application Data').item.json.job_title }}",
+              "type": "string"
+            },
+            {
+              "id": "s6",
+              "name": "portfolio_url",
+              "value": "={{ $('Prepare Application Data').item.json.portfolio_url }}",
+              "type": "string"
+            },
+            {
+              "id": "s16",
+              "name": "cv_link",
+              "value": "={{ $('Prepare Application Data').item.json.cv_link }}",
+              "type": "string"
+            },
+            {
+              "id": "s7",
+              "name": "submitted_at",
+              "value": "={{ $('Prepare Application Data').item.json.submitted_at }}",
+              "type": "string"
+            },
+            {
+              "id": "s8",
+              "name": "follow_up_date",
+              "value": "={{ $('Prepare Application Data').item.json.follow_up_date }}",
+              "type": "string"
+            },
+            {
+              "id": "s9",
+              "name": "fit_score",
+              "value": "={{ $json.output.fit_score }}",
+              "type": "number"
+            },
+            {
+              "id": "s10",
+              "name": "fit_summary",
+              "value": "={{ $json.output.fit_summary }}",
+              "type": "string"
+            },
+            {
+              "id": "s11",
+              "name": "matching_skills",
+              "value": "={{ $json.output.matching_skills }}",
+              "type": "array"
+            },
+            {
+              "id": "s12",
+              "name": "missing_skills",
+              "value": "={{ $json.output.missing_skills }}",
+              "type": "array"
+            },
+            {
+              "id": "s13",
+              "name": "reasoning",
+              "value": "={{ $json.output.reasoning }}",
+              "type": "string"
+            },
+            {
+              "id": "s14",
+              "name": "cover_letter",
+              "value": "={{ $json.output.cover_letter }}",
+              "type": "string"
+            },
+            {
+              "id": "s15",
+              "name": "ai_status",
+              "value": "Success",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2d2a3e2a-f1f3-4240-9cca-53599412ef37",
+      "name": "Combine AI Result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -224,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.candidate_email }}",
+        "subject": "=Your AI-Generated Cover Letter - {{ $json.job_title }} at {{ $json.company }}",
+        "emailType": "text",
+        "message": "=Hi {{ $json.candidate_name }},\n\nYour application has been analyzed successfully.\n\nCompany: {{ $json.company }}\nPosition: {{ $json.job_title }}\nAI Fit Score: {{ $json.fit_score }}/100\n\nWhy you are a good match:\n{{ $json.fit_summary }}\n\nMatching skills:\n{{ $json.matching_skills.join(', ') }}\n\nMissing / weaker areas:\n{{ $json.missing_skills.join(', ') || 'None identified' }}\n\nReasoning:\n{{ $json.reasoning }}\n\nPersonalized Cover Letter:\n\n{{ $json.cover_letter }}\n\nYour application has been logged and a follow-up reminder will be scheduled for 7 days from now.\n\nBest regards,\nJob Application Autopilot",
+        "options": {}
+      },
+      "id": "4b164a52-c92d-453d-9e0c-3d67d819b17e",
+      "name": "Gmail - Send Cover Letter",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        208
+      ],
+      "webhookId": "cf0cdfe1-8af7-4171-ae82-c19175ef394e",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Ts0AlJucTAwUogql",
+          "name": "Gmail account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "14sXg4jkP-n9X_GPhx-jTTFxM4HtS7GftwSO9mqqpNrs",
+          "mode": "list",
+          "cachedResultName": "JOB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14sXg4jkP-n9X_GPhx-jTTFxM4HtS7GftwSO9mqqpNrs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1060818385,
+          "mode": "list",
+          "cachedResultName": "Sheet2",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14sXg4jkP-n9X_GPhx-jTTFxM4HtS7GftwSO9mqqpNrs/edit#gid=1060818385"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "threadId",
+              "displayName": "threadId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "labelIds",
+              "displayName": "labelIds",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "19190d6f-3560-4d11-84f4-b6bec6de3e64",
+      "name": "Google Sheets - Log Application",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        240,
+        224
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "y590yJzNBdC6YRKB",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "14sXg4jkP-n9X_GPhx-jTTFxM4HtS7GftwSO9mqqpNrs",
+          "mode": "list",
+          "cachedResultName": "JOB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14sXg4jkP-n9X_GPhx-jTTFxM4HtS7GftwSO9mqqpNrs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14sXg4jkP-n9X_GPhx-jTTFxM4HtS7GftwSO9mqqpNrs/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {
+            "Date": "={{ $json.submitted_at }}",
+            "Name": "={{ $json.candidate_name }}",
+            "Email": "={{ $json.candidate_email }}",
+            "Phone": "={{ $json.phone }}",
+            "Company": "={{ $json.company }}",
+            "Position": "=",
+            "Fit Score": "={{ $json.fit_score }}",
+            "Fit Summary": "={{ $json.fit_summary }}",
+            "Matching Skills": "={{ $('Prepare Fallback Data').item.json.matching_skills }}",
+            "Missing Skills": "={{ $json.matching_skills }}",
+            "Reasoning": "={{ $json.reasoning }}",
+            "Cover Letter": "={{ $json.cover_letter }}",
+            "Portfolio": "=",
+            "Follow-up Date": "=",
+            "Status": "Logged",
+            "AI Status": "={{ $json.ai_status }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Company",
+              "displayName": "Company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Position",
+              "displayName": "Position",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Fit Score",
+              "displayName": "Fit Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Fit Summary",
+              "displayName": "Fit Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Matching Skills",
+              "displayName": "Matching Skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Missing Skills",
+              "displayName": "Missing Skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reasoning",
+              "displayName": "Reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Cover Letter",
+              "displayName": "Cover Letter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Portfolio",
+              "displayName": "Portfolio",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AI Status",
+              "displayName": "AI Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Follow-up Date",
+              "displayName": "Follow-up Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "threadId",
+              "displayName": "threadId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "labelIds",
+              "displayName": "labelIds",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "candidate_name",
+              "displayName": "candidate_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "candidate_email",
+              "displayName": "candidate_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phone",
+              "displayName": "phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "job_title",
+              "displayName": "job_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "portfolio_url",
+              "displayName": "portfolio_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cv_link",
+              "displayName": "cv_link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "submitted_at",
+              "displayName": "submitted_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "follow_up_date",
+              "displayName": "follow_up_date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fit_score",
+              "displayName": "fit_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fit_summary",
+              "displayName": "fit_summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "matching_skills",
+              "displayName": "matching_skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "missing_skills",
+              "displayName": "missing_skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reasoning",
+              "displayName": "reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cover_letter",
+              "displayName": "cover_letter",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ai_status",
+              "displayName": "ai_status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "4bd8a77a-4bd3-4297-979e-41b0934c4ce6",
+      "name": "Google Sheets - Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "y590yJzNBdC6YRKB",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "suriyaprakashar15751@gmail.com",
+          "mode": "list",
+          "cachedResultName": "suriyaprakashar15751@gmail.com"
+        },
+        "start": "={{ $json.follow_up_date }}",
+        "end": "={{ DateTime.fromISO($json.follow_up_date).plus({minutes: 30}).toISO() }}",
+        "additionalFields": {}
+      },
+      "id": "cc0dfe77-4047-44dd-97a1-248557c007f9",
+      "name": "Google Calendar - 7 Day Follow-up",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        416,
+        0
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "Xkjn1kwCRqsRMPuv",
+          "name": "Google Calendar account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Job Application Form": {
+      "main": [
+        [
+          {
+            "node": "Prepare Application Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Application Data": {
+      "main": [
+        [
+          {
+            "node": "Google Drive - Download CV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive - Download CV": {
+      "main": [
+        [
+          {
+            "node": "Extract CV Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract CV Text": {
+      "main": [
+        [
+          {
+            "node": "Gemini - Analyze & Write",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini - Analyze & Write": {
+      "main": [
+        [
+          {
+            "node": "Combine AI Result",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Fallback Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Gemini - Analyze & Write",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analysis Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Gemini - Analyze & Write",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Fallback Data": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Fallback Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine AI Result": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Send Cover Letter",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Sheets - Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail - Send Cover Letter": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Log Application",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Log": {
+      "main": [
+        [
+          {
+            "node": "Google Calendar - 7 Day Follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "b55b8ad1-3edd-4918-b0f7-7b85547cf726",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6cf022e87fdd03794960eda6e896bc9fc37f996cbb89fe03d5da9e63a6aa0776"
+  },
+  "nodeGroups": [],
+  "id": "MM7Vh3XEIBYepihI",
+  "tags": []
+}
