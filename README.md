@@ -194,6 +194,7 @@ flowchart TD
     E -->|Error| J["Prepare Fallback Data"]
 
     J --> K["Gmail - Fallback Message"]
+    K --> P["Append row in sheet"]
 
     I --> L["Gmail - Send Cover Letter"]
     I --> M["Google Sheets - Log"]
@@ -206,7 +207,7 @@ flowchart TD
 
 ## 🏗️ Workflow Components
 
-The imported n8n workflow contains **14 nodes**.
+The imported n8n workflow contains **15 nodes**.
 
 | Node | Purpose |
 |---|---|
@@ -219,6 +220,7 @@ The imported n8n workflow contains **14 nodes**.
 | **Analysis Output Parser** | Forces the AI result into a structured JSON format |
 | **Prepare Fallback Data** | Builds fallback application data when AI processing fails |
 | **Gmail - Fallback Message** | Notifies the candidate that AI analysis is temporarily unavailable |
+| **Append row in sheet** | Logs the application data to a fallback Google Sheet |
 | **Combine AI Result** | Combines application data with the successful Gemini result |
 | **Gmail - Send Cover Letter** | Sends the analysis and generated cover letter |
 | **Google Sheets - Log Application** | Appends application information after the email step |
@@ -258,7 +260,7 @@ Google Docs files can be converted to PDF during the download step.
 
 ### 4. Text Extraction
 
-The downloaded PDF is processed by **Extract CV Text**, producing the CV text that is passed to Gemini.
+The downloaded PDF is processed by **Extract CV Text** (utilizing Gemini Langchain integration), producing the CV text that is passed to Gemini.
 
 ### 5. AI Evaluation
 
@@ -318,9 +320,11 @@ Gemini Error
 Prepare Fallback Data
     ↓
 Gmail - Fallback Message
+    ↓
+Append row in sheet
 ```
 
-The candidate is informed that the automated AI analysis is temporarily unavailable while the application can still be recorded.
+The candidate is informed that the automated AI analysis is temporarily unavailable while the application is logged to a fallback sheet.
 
 ---
 
@@ -388,7 +392,7 @@ The date is generated automatically using:
 Current time + 7 days
 ```
 
-This means every successfully processed application can have a follow-up scheduled automatically.
+This means every successfully processed application can have a follow-up scheduled automatically. The event description is automatically populated with the Company Name, Fit Score, and Cover Letter for easy reference.
 
 ---
 
@@ -471,15 +475,7 @@ This makes the workflow more suitable for transparent CV screening than a generi
 
 The exported workflow contains environment-specific n8n credential references and Google resource references. When importing it into another n8n instance, review every integration node and select the appropriate credentials/resources for your environment.
 
-The current exported workflow also contains Google Sheets mappings that should be **verified before production use**, particularly fields such as:
-
-- `Position`
-- `Matching Skills`
-- `Missing Skills`
-- `Portfolio`
-- `Follow-up Date`
-
-The workflow export currently contains mappings for these fields that may not correspond to the intended application-data fields. Test the resulting spreadsheet rows before relying on the automation in production.
+The workflow export contains fully configured mappings for Google Sheets, ensuring all data fields (Position, Skills, Portfolio, Follow-up Date, etc.) are correctly logged. Test the resulting spreadsheet rows before relying on the automation in production.
 
 ---
 
@@ -580,7 +576,7 @@ The n8n workflow can be imported directly from the provided JSON export:
 Job Application Autopilot (1).json
 ```
 
-The workflow contains **14 nodes** and uses n8n's standard workflow connection structure.
+The workflow contains **15 nodes** and uses n8n's standard workflow connection structure.
 
 ---
 

@@ -165,24 +165,38 @@
     },
     {
       "parameters": {
-        "operation": "pdf",
+        "resource": "document",
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "models/gemini-3.1-flash-lite",
+          "cachedResultName": "gemini-3.1-flash-lite"
+        },
+        "text": "Extract ALL information contained in this CV/resume document completely and exactly as written. Capture every section in full: personal/contact details, summary/objective, work experience (all roles, companies, dates, responsibilities), education (all degrees, institutions, years, scores), skills (technical and soft skills), certifications, projects, publications, languages, achievements, and any other information present. Preserve the original section structure and wording. Do not summarize, omit anything, or add commentary.",
+        "inputType": "binary",
         "options": {
-          "joinPages": true
+          "maxOutputTokens": 8000
         }
       },
-      "id": "45580204-d023-4fd9-9dfa-d053f65b0f6c",
+      "id": "3d927759-2337-4bac-973e-214b1d1828b8",
       "name": "Extract CV Text",
-      "type": "n8n-nodes-base.extractFromFile",
-      "typeVersion": 1.1,
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
       "position": [
         -1024,
         368
-      ]
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "qONPDO1BUloGnDKy",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
     },
     {
       "parameters": {
         "promptType": "define",
-        "text": "=CANDIDATE CV:\n\n{{ $json.text }}\n\nJOB DESCRIPTION:\n\n{{ $('Prepare Application Data').item.json.job_description }}\n\nCandidate: {{ $('Prepare Application Data').item.json.candidate_name }}\nCompany: {{ $('Prepare Application Data').item.json.company }}\nPosition: {{ $('Prepare Application Data').item.json.job_title }}",
+        "text": "=CANDIDATE CV:\n\n{{ $json.content }}\n\nJOB DESCRIPTION:\n\n{{ $('Prepare Application Data').item.json.job_description }}\n\nCandidate: {{ $('Prepare Application Data').item.json.candidate_name }}\nCompany: {{ $('Prepare Application Data').item.json.company }}\nPosition: {{ $('Prepare Application Data').item.json.job_title }}",
         "hasOutputParser": true,
         "messages": {
           "messageValues": [
@@ -205,6 +219,7 @@
     },
     {
       "parameters": {
+        "modelName": "models/gemini-3.1-flash-lite",
         "options": {
           "temperature": 0.4
         }
@@ -219,8 +234,8 @@
       ],
       "credentials": {
         "googlePalmApi": {
-          "id": "3dw1f9FA4OGlrBlH",
-          "name": "Google Gemini(PaLM) Api account 3"
+          "id": "qONPDO1BUloGnDKy",
+          "name": "Google Gemini(PaLM) Api account"
         }
       }
     },
@@ -363,14 +378,89 @@
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.1,
       "position": [
-        112,
+        -16,
         464
       ],
-      "webhookId": "de380984-f963-418e-99bc-2c77e90c1fb0",
+      "webhookId": "f47fa689-cd33-4643-9338-f5da50446e66",
       "credentials": {
         "gmailOAuth2": {
-          "id": "ib01UFUzm48eIJc5",
-          "name": "Gmail account"
+          "id": "HAYGvqhzmEB4Sdri",
+          "name": "Gmail account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "14sXg4jkP-n9X_GPhx-jTTFxM4HtS7GftwSO9mqqpNrs",
+          "mode": "list",
+          "cachedResultName": "JOB",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14sXg4jkP-n9X_GPhx-jTTFxM4HtS7GftwSO9mqqpNrs/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1111461220,
+          "mode": "list",
+          "cachedResultName": "Sheet3",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/14sXg4jkP-n9X_GPhx-jTTFxM4HtS7GftwSO9mqqpNrs/edit#gid=1111461220"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "threadId",
+              "displayName": "threadId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "labelIds",
+              "displayName": "labelIds",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "880fca0a-81a3-4a69-83d1-bfeddc07f87d",
+      "name": "Append row in sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        288,
+        464
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "y590yJzNBdC6YRKB",
+          "name": "Google Sheets account"
         }
       }
     },
@@ -503,7 +593,7 @@
         0,
         208
       ],
-      "webhookId": "cf0cdfe1-8af7-4171-ae82-c19175ef394e",
+      "webhookId": "a7474838-d728-4896-ae60-893b8961a314",
       "credentials": {
         "gmailOAuth2": {
           "id": "Ts0AlJucTAwUogql",
@@ -576,8 +666,8 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        240,
-        224
+        304,
+        208
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -611,15 +701,15 @@
             "Email": "={{ $json.candidate_email }}",
             "Phone": "={{ $json.phone }}",
             "Company": "={{ $json.company }}",
-            "Position": "=",
+            "Position": "={{ $json.job_title }}",
             "Fit Score": "={{ $json.fit_score }}",
             "Fit Summary": "={{ $json.fit_summary }}",
-            "Matching Skills": "={{ $('Prepare Fallback Data').item.json.matching_skills }}",
-            "Missing Skills": "={{ $json.matching_skills }}",
+            "Matching Skills": "={{ $json.matching_skills }}",
+            "Missing Skills": "={{ $json.missing_skills }}",
             "Reasoning": "={{ $json.reasoning }}",
             "Cover Letter": "={{ $json.cover_letter }}",
-            "Portfolio": "=",
-            "Follow-up Date": "=",
+            "Portfolio": "={{ $json.portfolio_url }}",
+            "Follow-up Date": "={{ $json.follow_up_date }}",
             "Status": "Logged",
             "AI Status": "={{ $json.ai_status }}"
           },
@@ -1006,16 +1096,18 @@
           "mode": "list",
           "cachedResultName": "suriyaprakashar15751@gmail.com"
         },
-        "start": "={{ $json.follow_up_date }}",
-        "end": "={{ DateTime.fromISO($json.follow_up_date).plus({minutes: 30}).toISO() }}",
-        "additionalFields": {}
+        "start": "={{ $('Combine AI Result').item.json.follow_up_date }}",
+        "end": "={{ DateTime.fromISO($('Combine AI Result').item.json.follow_up_date).plus({minutes: 30}).toISO() }}",
+        "additionalFields": {
+          "description": "={{ $json.company }}\nfit_score={{ $('Combine AI Result').item.json.fit_score }}\ncover_letter:\n{{ $('Combine AI Result').item.json.cover_letter }}"
+        }
       },
       "id": "cc0dfe77-4047-44dd-97a1-248557c007f9",
       "name": "Google Calendar - 7 Day Follow-up",
       "type": "n8n-nodes-base.googleCalendar",
       "typeVersion": 1.3,
       "position": [
-        416,
+        288,
         0
       ],
       "credentials": {
@@ -1123,6 +1215,17 @@
         ]
       ]
     },
+    "Gmail - Fallback Message": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Combine AI Result": {
       "main": [
         [
@@ -1167,7 +1270,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "b55b8ad1-3edd-4918-b0f7-7b85547cf726",
+  "versionId": "ada59bd0-0e48-4bb4-a2ae-d87bc838491d",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "6cf022e87fdd03794960eda6e896bc9fc37f996cbb89fe03d5da9e63a6aa0776"
